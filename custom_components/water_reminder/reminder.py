@@ -77,7 +77,18 @@ class WaterReminder:
 
     @property
     def _opts(self) -> dict[str, Any]:
-        return {**self.entry.data, **self.entry.options}
+        # The options flow saves the full set of settings, so once options
+        # exist they replace the setup data (a cleared field must stay cleared).
+        if self.entry.options:
+            return {
+                CONF_NOTIFY_SERVICE: self.entry.data[CONF_NOTIFY_SERVICE],
+                **self.entry.options,
+            }
+        return dict(self.entry.data)
+
+    def _action(self, base: str) -> str:
+        """Action id unique to this entry, so a tap only pauses this reminder."""
+        return f"{base}_{self.entry.entry_id}"
 
     @property
     def notify_service(self) -> str:
@@ -129,6 +140,10 @@ class WaterReminder:
                 unsub()
         self._unsub_tick = self._unsub_clear = self._unsub_event = None
         self._unsub_alarm = self._unsub_pause_end = None
+
+    async def async_save(self) -> None:
+        """Write state now (replaces a pending delayed save)."""
+        await self._store.async_save(self._data())
 
     @callback
     def async_add_listener(self, update: CALLBACK_TYPE) -> Callable[[], None]:
@@ -261,9 +276,12 @@ class WaterReminder:
                     "tag": NOTIFICATION_TAG,
                     "group": NOTIFICATION_TAG,
                     "actions": [
-                        {"action": ACTION_PAUSE_1H, "title": "1 h"},
-                        {"action": ACTION_PAUSE_3H, "title": "3 h"},
-                        {"action": ACTION_PAUSE_TODAY, "title": self._today_label()},
+                        {"action": self._action(ACTION_PAUSE_1H), "title": "1 h"},
+                        {"action": self._action(ACTION_PAUSE_3H), "title": "3 h"},
+                        {
+                            "action": self._action(ACTION_PAUSE_TODAY),
+                            "title": self._today_label(),
+                        },
                     ],
                 },
             }
@@ -293,7 +311,11 @@ class WaterReminder:
 
     async def _handle_action(self, event: Event) -> None:
         action = event.data.get("action")
-        hours = {ACTION_PAUSE_1H: 1, ACTION_PAUSE_3H: 3, ACTION_PAUSE_TODAY: None}
+        hours = {
+            self._action(ACTION_PAUSE_1H): 1,
+            self._action(ACTION_PAUSE_3H): 3,
+            self._action(ACTION_PAUSE_TODAY): None,
+        }
         if action not in hours:
             return
         self.pause(hours[action])

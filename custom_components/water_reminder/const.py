@@ -29,7 +29,8 @@ ALARM_STATES: Final = [
 
 NOTIFICATION_TAG: Final = "water_reminder"
 
-# Actionable notification ids (event mobile_app_notification_action).
+# Actionable notification id prefixes (event mobile_app_notification_action);
+# the entry id is appended so each entry only reacts to its own taps.
 ACTION_PAUSE_1H: Final = "WATER_REMINDER_PAUSE_1H"
 ACTION_PAUSE_3H: Final = "WATER_REMINDER_PAUSE_3H"
 ACTION_PAUSE_TODAY: Final = "WATER_REMINDER_PAUSE_TODAY"

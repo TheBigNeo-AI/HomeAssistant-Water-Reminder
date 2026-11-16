@@ -26,7 +26,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaterReminderConfigEntry
 
 async def async_unload_entry(hass: HomeAssistant, entry: WaterReminderConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        # Flush a pending delayed save so a reload does not load stale state.
+        await entry.runtime_data.async_save()
+    return unloaded
 
 
 async def _async_reload(hass: HomeAssistant, entry: WaterReminderConfigEntry) -> None:

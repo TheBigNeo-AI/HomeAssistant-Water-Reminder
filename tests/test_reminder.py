@@ -62,7 +62,7 @@ async def test_push_and_clear(hass: HomeAssistant, entry, sent, freezer) -> None
     assert len(_pushes(sent)) == 1
     push = _pushes(sent)[0]
     assert push["data"]["tag"] == "water_reminder"
-    assert push["data"]["actions"][0]["action"] == ACTION_PAUSE_1H
+    assert push["data"]["actions"][0]["action"] == f"{ACTION_PAUSE_1H}_{entry.entry_id}"
     assert _clears(sent) == []
     await _advance(hass, freezer, seconds=61)
     assert len(_clears(sent)) == 1
@@ -130,14 +130,19 @@ async def test_resume_button(hass: HomeAssistant, entry, sent, freezer) -> None:
 
 
 async def test_notification_actions(hass: HomeAssistant, entry, sent) -> None:
-    hass.bus.async_fire("mobile_app_notification_action", {"action": ACTION_PAUSE_TODAY})
+    # Foreign actions and taps meant for another entry are ignored.
+    for action in ("OTHER", ACTION_PAUSE_TODAY, f"{ACTION_PAUSE_TODAY}_other_entry"):
+        hass.bus.async_fire("mobile_app_notification_action", {"action": action})
+        await hass.async_block_till_done()
+    assert entry.runtime_data.paused_until is None
+    assert _clears(sent) == []
+
+    hass.bus.async_fire(
+        "mobile_app_notification_action", {"action": f"{ACTION_PAUSE_TODAY}_{entry.entry_id}"}
+    )
     await hass.async_block_till_done()
     paused = entry.runtime_data.paused_until
     assert paused == dt_util.start_of_local_day() + timedelta(days=1)
-    assert len(_clears(sent)) == 1
-    # Foreign actions are ignored.
-    hass.bus.async_fire("mobile_app_notification_action", {"action": "OTHER"})
-    await hass.async_block_till_done()
     assert len(_clears(sent)) == 1
 
 
@@ -150,6 +155,14 @@ async def test_state_persists(hass: HomeAssistant, entry, sent, freezer) -> None
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get(INTERVAL).state == "45"
+    assert hass.states.get(FOCUS).state == "on"
+
+
+async def test_reload_keeps_unsaved_state(hass: HomeAssistant, entry, sent) -> None:
+    """A reload right after a change must not load stale state from disk."""
+    await hass.services.async_call("switch", "turn_on", {"entity_id": FOCUS}, blocking=True)
+    assert await hass.config_entries.async_reload(entry.entry_id)  # within the save delay
+    await hass.async_block_till_done()
     assert hass.states.get(FOCUS).state == "on"
 
 

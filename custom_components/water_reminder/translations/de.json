@@ -21,7 +21,8 @@
       }
     },
     "error": {
-      "unknown_service": "Dienst nicht gefunden."
+      "unknown_service": "Dienst nicht gefunden.",
+      "not_mobile_app": "Bitte einen notify.mobile_app_*-Dienst wählen (Home Assistant Companion App)."
     },
     "abort": {
       "already_configured": "Für diesen Dienst gibt es schon eine Erinnerung."

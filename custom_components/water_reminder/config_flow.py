@@ -22,13 +22,13 @@ from .const import (
     DOMAIN,
 )
 
+MOBILE_APP_PREFIX = "mobile_app_"
+
 
 def _notify_services(hass: HomeAssistant) -> list[str]:
-    """Mobile app notify services first, then the rest."""
+    """Mobile app notify services (tag, actions and clearing need the companion app)."""
     names = sorted(hass.services.async_services_for_domain("notify"))
-    names = [n for n in names if n not in ("notify", "send_message", "persistent_notification")]
-    names.sort(key=lambda n: not n.startswith("mobile_app_"))
-    return [f"notify.{n}" for n in names]
+    return [f"notify.{n}" for n in names if n.startswith(MOBILE_APP_PREFIX)]
 
 
 def _schema(hass: HomeAssistant, values: dict[str, Any], with_notify: bool) -> vol.Schema:
@@ -91,6 +91,8 @@ class WaterReminderConfigFlow(ConfigFlow, domain=DOMAIN):
             domain, _, name = service.partition(".")
             if domain != "notify" or not self.hass.services.has_service(domain, name):
                 errors[CONF_NOTIFY_SERVICE] = "unknown_service"
+            elif not name.startswith(MOBILE_APP_PREFIX):
+                errors[CONF_NOTIFY_SERVICE] = "not_mobile_app"
             else:
                 await self.async_set_unique_id(service)
                 self._abort_if_unique_id_configured()
