@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pytest
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
@@ -13,6 +15,7 @@ from custom_components.water_reminder.const import (
     ACTION_PAUSE_1H,
     ACTION_PAUSE_TODAY,
     CONF_NOTIFY_SERVICE,
+    CONF_NOTIFY_SERVICES,
     DOMAIN,
 )
 
@@ -48,6 +51,7 @@ async def test_entities_created(hass: HomeAssistant, entry) -> None:
     assert hass.states.get(STATUS).state == "active"
     buttons = {s.entity_id for s in hass.states.async_all("button")}
     assert buttons == {
+        "button.water_reminder_send_test",
         "button.water_reminder_pause_1_h",
         "button.water_reminder_pause_3_h",
         "button.water_reminder_pause_today",
@@ -172,10 +176,74 @@ async def test_unload(hass: HomeAssistant, entry, sent, freezer) -> None:
     assert sent == []
 
 
-async def test_without_alarm(hass: HomeAssistant, sent, freezer) -> None:
+async def test_migrate_v1_without_alarm(hass: HomeAssistant, sent, freezer) -> None:
+    """A v1 entry (single notify service) is migrated to a target list."""
     e = MockConfigEntry(domain=DOMAIN, unique_id=NOTIFY, data={CONF_NOTIFY_SERVICE: NOTIFY})
     e.add_to_hass(hass)
     assert await hass.config_entries.async_setup(e.entry_id)
     await hass.async_block_till_done()
+    assert e.version == 2
+    assert e.data == {CONF_NOTIFY_SERVICES: [NOTIFY]}
     await _advance(hass, freezer, minutes=31)
+    assert len(_pushes(sent)) == 1
+
+
+async def test_aligned_to_the_hour(hass: HomeAssistant, sent, freezer) -> None:
+    """Pushes land on hh:00 / hh:30, whenever the reminder was started."""
+    freezer.move_to("2026-11-16T10:07:00-08:00")
+    e = MockConfigEntry(domain=DOMAIN, version=2, data={CONF_NOTIFY_SERVICES: [NOTIFY]})
+    e.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(e.entry_id)
+    await hass.async_block_till_done()
+    assert dt_util.as_local(e.runtime_data.next_push).strftime("%H:%M:%S") == "10:30:00"
+    await _advance(hass, freezer, minutes=23, seconds=1)
+    assert len(_pushes(sent)) == 1
+    assert dt_util.as_local(e.runtime_data.next_push).strftime("%H:%M:%S") == "11:00:00"
+
+
+async def test_interval_restarts_at_midnight(hass: HomeAssistant, entry, freezer) -> None:
+    """Intervals that do not divide a day restart at 00:00."""
+    reminder = entry.runtime_data
+    reminder.set_interval(45)
+    after = dt_util.as_utc(dt_util.parse_datetime("2026-11-16T23:40:00-08:00"))
+    assert dt_util.as_local(reminder._next_slot(after)).strftime("%d %H:%M") == "17 00:00"
+    after = dt_util.as_utc(dt_util.parse_datetime("2026-11-17T00:00:00-08:00"))
+    assert dt_util.as_local(reminder._next_slot(after)).strftime("%d %H:%M") == "17 00:45"
+
+
+async def test_multiple_targets(hass: HomeAssistant, sent, freezer) -> None:
+    ipad: list[dict] = []
+
+    async def _ipad(call: ServiceCall) -> None:
+        ipad.append(dict(call.data))
+
+    hass.services.async_register("notify", "mobile_app_test_ipad", _ipad)
+    e = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        data={CONF_NOTIFY_SERVICES: [NOTIFY, "notify.mobile_app_test_ipad"]},
+    )
+    e.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(e.entry_id)
+    await hass.async_block_till_done()
+    await _advance(hass, freezer, minutes=30, seconds=1)
+    assert len(_pushes(sent)) == len(_pushes(ipad)) == 1
+    await _advance(hass, freezer, seconds=61)
+    assert len(_clears(sent)) == len(_clears(ipad)) == 1
+
+
+async def test_test_button(hass: HomeAssistant, entry, sent) -> None:
+    test = {"entity_id": "button.water_reminder_send_test"}
+    await hass.services.async_call("button", "press", test, blocking=True)
+    assert len(_pushes(sent)) == 1
+
+    await hass.services.async_call("switch", "turn_on", {"entity_id": FOCUS}, blocking=True)
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call("button", "press", test, blocking=True)
+    assert err.value.translation_key == "test_quiet_focus"
+
+    hass.states.async_set(ALARM, "armed_night")
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call("button", "press", test, blocking=True)
+    assert err.value.translation_key == "test_quiet_alarm"
     assert len(_pushes(sent)) == 1

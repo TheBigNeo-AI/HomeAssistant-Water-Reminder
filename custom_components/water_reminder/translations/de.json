@@ -4,7 +4,7 @@
       "user": {
         "title": "Water Reminder",
         "data": {
-          "notify_service": "Benachrichtigungsdienst",
+          "notify_services": "Benachrichtigungsziele",
           "alarm_entity": "Alarmanlage",
           "quiet_alarm_states": "Still bei Alarmzustand",
           "clear_after": "Meldung entfernen nach",
@@ -12,26 +12,28 @@
           "message": "Nachricht"
         },
         "data_description": {
-          "notify_service": "Das iPhone. Trägst du die Apple Watch, leitet iOS die Meldung automatisch dorthin.",
+          "notify_services": "Das iPhone (optional weitere Geräte mit der Companion App). Trägst du die Apple Watch, leitet iOS die Meldung automatisch dorthin.",
           "alarm_entity": "Optional. Keine Erinnerung in den unten gewählten Zuständen.",
           "clear_after": "0 = Meldung bleibt stehen.",
-          "title": "Leer = Standardtext.",
-          "message": "Leer = Standardtext."
+          "title": "Leer = Standard: {default_title}",
+          "message": "Leer = Standard: {default_message}"
         }
       }
     },
     "error": {
       "unknown_service": "Dienst nicht gefunden.",
-      "not_mobile_app": "Bitte einen notify.mobile_app_*-Dienst wählen (Home Assistant Companion App)."
+      "not_mobile_app": "Nur notify.mobile_app_*-Dienste (Home Assistant Companion App) werden unterstützt.",
+      "no_service": "Mindestens ein Benachrichtigungsziel wählen."
     },
     "abort": {
-      "already_configured": "Für diesen Dienst gibt es schon eine Erinnerung."
+      "already_configured": "Für diese Ziele gibt es bereits eine Erinnerung."
     }
   },
   "options": {
     "step": {
       "init": {
         "data": {
+          "notify_services": "Benachrichtigungsziele",
           "alarm_entity": "Alarmanlage",
           "quiet_alarm_states": "Still bei Alarmzustand",
           "clear_after": "Meldung entfernen nach",
@@ -39,12 +41,18 @@
           "message": "Nachricht"
         },
         "data_description": {
+          "notify_services": "Das iPhone (optional weitere Geräte mit der Companion App). Trägst du die Apple Watch, leitet iOS die Meldung automatisch dorthin.",
           "alarm_entity": "Optional. Keine Erinnerung in den unten gewählten Zuständen.",
           "clear_after": "0 = Meldung bleibt stehen.",
-          "title": "Leer = Standardtext.",
-          "message": "Leer = Standardtext."
+          "title": "Leer = Standard: {default_title}",
+          "message": "Leer = Standard: {default_message}"
         }
       }
+    },
+    "error": {
+      "unknown_service": "Dienst nicht gefunden.",
+      "not_mobile_app": "Nur notify.mobile_app_*-Dienste (Home Assistant Companion App) werden unterstützt.",
+      "no_service": "Mindestens ein Benachrichtigungsziel wählen."
     }
   },
   "selector": {
@@ -91,6 +99,9 @@
       }
     },
     "button": {
+      "test": {
+        "name": "Test senden"
+      },
       "pause_1h": {
         "name": "1 h pausieren"
       },
@@ -103,6 +114,20 @@
       "resume": {
         "name": "Fortsetzen"
       }
+    }
+  },
+  "exceptions": {
+    "test_off": {
+      "message": "Nicht gesendet: Die Erinnerung ist ausgeschaltet."
+    },
+    "test_paused": {
+      "message": "Nicht gesendet: Die Erinnerung ist pausiert."
+    },
+    "test_quiet_alarm": {
+      "message": "Nicht gesendet: Ruhe wegen Alarmzustand."
+    },
+    "test_quiet_focus": {
+      "message": "Nicht gesendet: Ruhe wegen Fokus."
     }
   }
 }

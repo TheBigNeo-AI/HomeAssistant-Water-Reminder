@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant, ServiceCall
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.water_reminder.const import CONF_ALARM_ENTITY, CONF_NOTIFY_SERVICE, DOMAIN
+from custom_components.water_reminder.const import CONF_ALARM_ENTITY, CONF_NOTIFY_SERVICES, DOMAIN
 
 ALARM = "alarm_control_panel.home_alarm"
 NOTIFY = "notify.mobile_app_test_iphone"
@@ -17,6 +18,12 @@ NOTIFY = "notify.mobile_app_test_iphone"
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Enable custom integrations in all tests."""
+
+
+@pytest.fixture(autouse=True)
+def start_on_the_hour(freezer: FrozenDateTimeFactory) -> None:
+    """Start every test at 10:00 local time (tests run in US/Pacific)."""
+    freezer.move_to("2026-11-16T10:00:00-08:00")
 
 
 @pytest.fixture
@@ -38,8 +45,8 @@ async def entry(hass: HomeAssistant, sent: list[dict[str, Any]]) -> MockConfigEn
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Water Reminder",
-        unique_id=NOTIFY,
-        data={CONF_NOTIFY_SERVICE: NOTIFY, CONF_ALARM_ENTITY: ALARM},
+        version=2,
+        data={CONF_NOTIFY_SERVICES: [NOTIFY], CONF_ALARM_ENTITY: ALARM},
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)

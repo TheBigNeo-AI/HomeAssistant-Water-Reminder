@@ -9,7 +9,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.event import (
     async_call_later,
     async_track_point_in_utc_time,
@@ -25,7 +25,7 @@ from .const import (
     CONF_ALARM_ENTITY,
     CONF_CLEAR_AFTER,
     CONF_MESSAGE,
-    CONF_NOTIFY_SERVICE,
+    CONF_NOTIFY_SERVICES,
     CONF_QUIET_ALARM_STATES,
     CONF_TITLE,
     DEFAULT_CLEAR_AFTER,
@@ -81,7 +81,7 @@ class WaterReminder:
         # exist they replace the setup data (a cleared field must stay cleared).
         if self.entry.options:
             return {
-                CONF_NOTIFY_SERVICE: self.entry.data[CONF_NOTIFY_SERVICE],
+                CONF_NOTIFY_SERVICES: self.entry.data[CONF_NOTIFY_SERVICES],
                 **self.entry.options,
             }
         return dict(self.entry.data)
@@ -91,8 +91,8 @@ class WaterReminder:
         return f"{base}_{self.entry.entry_id}"
 
     @property
-    def notify_service(self) -> str:
-        return self._opts[CONF_NOTIFY_SERVICE]
+    def notify_services(self) -> list[str]:
+        return list(self._opts[CONF_NOTIFY_SERVICES])
 
     @property
     def alarm_entity(self) -> str | None:
@@ -244,26 +244,48 @@ class WaterReminder:
 
     # ----- scheduling --------------------------------------------------------
 
+    def _next_slot(self, after: datetime) -> datetime:
+        """Next push time strictly after `after`, aligned to local midnight.
+
+        With 30 min that is hh:00 and hh:30; intervals that do not divide a day
+        restart at midnight, so the last slot of a day can be shorter.
+        """
+        midnight = dt_util.start_of_local_day(dt_util.as_local(after))
+        elapsed = dt_util.as_local(after) - midnight
+        slot = midnight + timedelta(minutes=self.interval) * (
+            elapsed // timedelta(minutes=self.interval) + 1
+        )
+        return dt_util.as_utc(min(slot, midnight + timedelta(days=1)))
+
     @callback
-    def _schedule(self) -> None:
+    def _schedule(self, after: datetime | None = None) -> None:
         if self._unsub_tick:
             self._unsub_tick()
             self._unsub_tick = None
         self.next_push = None
         if self.enabled:
-            self.next_push = dt_util.utcnow() + timedelta(minutes=self.interval)
+            self.next_push = self._next_slot(after or dt_util.utcnow())
             self._unsub_tick = async_track_point_in_utc_time(
                 self.hass, self._handle_tick, self.next_push
             )
 
-    async def _handle_tick(self, _now: datetime) -> None:
+    async def _handle_tick(self, now: datetime) -> None:
         self._unsub_tick = None
-        self._schedule()
+        # Never schedule the slot that just fired again, even if the timer was early.
+        self._schedule(max(now, dt_util.utcnow(), self.next_push or now))
         self._refresh()
         if self.status == STATUS_ACTIVE:
             await self.async_send()
 
     # ----- notifications -----------------------------------------------------
+
+    async def async_test(self) -> None:
+        """Send a reminder now, unless a quiet rule would suppress it."""
+        if (status := self.status) != STATUS_ACTIVE:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key=f"test_{status}"
+            )
+        await self.async_send()
 
     async def async_send(self) -> None:
         """Send the reminder and schedule its removal."""
@@ -303,11 +325,12 @@ class WaterReminder:
         await self._notify({"message": "clear_notification", "data": {"tag": NOTIFICATION_TAG}})
 
     async def _notify(self, data: dict[str, Any]) -> None:
-        domain, _, service = self.notify_service.partition(".")
-        try:
-            await self.hass.services.async_call(domain, service, data, blocking=True)
-        except (HomeAssistantError, ValueError) as err:
-            _LOGGER.warning("Sending via %s failed: %s", self.notify_service, err)
+        for target in self.notify_services:
+            domain, _, service = target.partition(".")
+            try:
+                await self.hass.services.async_call(domain, service, data, blocking=True)
+            except (HomeAssistantError, ValueError) as err:
+                _LOGGER.warning("Sending via %s failed: %s", target, err)
 
     async def _handle_action(self, event: Event) -> None:
         action = event.data.get("action")

@@ -6,7 +6,8 @@ from typing import Final
 
 DOMAIN: Final = "water_reminder"
 
-CONF_NOTIFY_SERVICE: Final = "notify_service"
+CONF_NOTIFY_SERVICE: Final = "notify_service"  # config entry v1, single target
+CONF_NOTIFY_SERVICES: Final = "notify_services"
 CONF_ALARM_ENTITY: Final = "alarm_entity"
 CONF_QUIET_ALARM_STATES: Final = "quiet_alarm_states"
 CONF_CLEAR_AFTER: Final = "clear_after"

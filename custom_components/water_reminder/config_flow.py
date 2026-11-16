@@ -14,13 +14,14 @@ from .const import (
     CONF_ALARM_ENTITY,
     CONF_CLEAR_AFTER,
     CONF_MESSAGE,
-    CONF_NOTIFY_SERVICE,
+    CONF_NOTIFY_SERVICES,
     CONF_QUIET_ALARM_STATES,
     CONF_TITLE,
     DEFAULT_CLEAR_AFTER,
     DEFAULT_QUIET_ALARM_STATES,
     DOMAIN,
 )
+from .reminder import default_texts
 
 MOBILE_APP_PREFIX = "mobile_app_"
 
@@ -31,16 +32,16 @@ def _notify_services(hass: HomeAssistant) -> list[str]:
     return [f"notify.{n}" for n in names if n.startswith(MOBILE_APP_PREFIX)]
 
 
-def _schema(hass: HomeAssistant, values: dict[str, Any], with_notify: bool) -> vol.Schema:
-    fields: dict[Any, Any] = {}
-    if with_notify:
-        fields[
-            vol.Required(
-                CONF_NOTIFY_SERVICE, default=values.get(CONF_NOTIFY_SERVICE, vol.UNDEFINED)
+def _schema(hass: HomeAssistant, values: dict[str, Any]) -> vol.Schema:
+    fields: dict[Any, Any] = {
+        vol.Required(
+            CONF_NOTIFY_SERVICES, default=values.get(CONF_NOTIFY_SERVICES, vol.UNDEFINED)
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=_notify_services(hass), multiple=True, custom_value=True
             )
-        ] = selector.SelectSelector(
-            selector.SelectSelectorConfig(options=_notify_services(hass), custom_value=True)
         )
+    }
     alarm = values.get(CONF_ALARM_ENTITY)
     fields[vol.Optional(CONF_ALARM_ENTITY, description={"suggested_value": alarm})] = (
         selector.EntitySelector(selector.EntitySelectorConfig(domain="alarm_control_panel"))
@@ -71,6 +72,11 @@ def _schema(hass: HomeAssistant, values: dict[str, Any], with_notify: bool) -> v
     return vol.Schema(fields)
 
 
+def _placeholders(hass: HomeAssistant) -> dict[str, str]:
+    title, message = default_texts(hass.config.language)
+    return {"default_title": title, "default_message": message}
+
+
 def _clean(user_input: dict[str, Any]) -> dict[str, Any]:
     data = {k: v for k, v in user_input.items() if v not in (None, "")}
     if CONF_CLEAR_AFTER in data:
@@ -78,29 +84,37 @@ def _clean(user_input: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-class WaterReminderConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Set up a reminder for one notify target."""
+def _validate(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+    """Every target must be an existing notify.mobile_app_* service."""
+    for target in data.get(CONF_NOTIFY_SERVICES, []):
+        domain, _, name = target.partition(".")
+        if domain != "notify" or not hass.services.has_service(domain, name):
+            return {CONF_NOTIFY_SERVICES: "unknown_service"}
+        if not name.startswith(MOBILE_APP_PREFIX):
+            return {CONF_NOTIFY_SERVICES: "not_mobile_app"}
+    if not data.get(CONF_NOTIFY_SERVICES):
+        return {CONF_NOTIFY_SERVICES: "no_service"}
+    return {}
 
-    VERSION = 1
+
+class WaterReminderConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Set up a reminder for one or more notify targets."""
+
+    VERSION = 2
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             data = _clean(user_input)
-            service = data[CONF_NOTIFY_SERVICE]
-            domain, _, name = service.partition(".")
-            if domain != "notify" or not self.hass.services.has_service(domain, name):
-                errors[CONF_NOTIFY_SERVICE] = "unknown_service"
-            elif not name.startswith(MOBILE_APP_PREFIX):
-                errors[CONF_NOTIFY_SERVICE] = "not_mobile_app"
-            else:
-                await self.async_set_unique_id(service)
-                self._abort_if_unique_id_configured()
+            if not (errors := _validate(self.hass, data)):
+                data[CONF_NOTIFY_SERVICES] = sorted(set(data[CONF_NOTIFY_SERVICES]))
+                self._async_abort_entries_match({CONF_NOTIFY_SERVICES: data[CONF_NOTIFY_SERVICES]})
                 return self.async_create_entry(title="Water Reminder", data=data)
         return self.async_show_form(
             step_id="user",
-            data_schema=_schema(self.hass, user_input or {}, with_notify=True),
+            data_schema=_schema(self.hass, user_input or {}),
             errors=errors,
+            description_placeholders=_placeholders(self.hass),
         )
 
     @staticmethod
@@ -110,12 +124,19 @@ class WaterReminderConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class WaterReminderOptionsFlow(OptionsFlow):
-    """Change alarm, clear delay and texts."""
+    """Change targets, alarm, clear delay and texts."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(data=_clean(user_input))
-        values = {**self.config_entry.data, **self.config_entry.options}
+            data = _clean(user_input)
+            if not (errors := _validate(self.hass, data)):
+                data[CONF_NOTIFY_SERVICES] = sorted(set(data[CONF_NOTIFY_SERVICES]))
+                return self.async_create_entry(data=data)
+        values = user_input or {**self.config_entry.data, **self.config_entry.options}
         return self.async_show_form(
-            step_id="init", data_schema=_schema(self.hass, values, with_notify=False)
+            step_id="init",
+            data_schema=_schema(self.hass, values),
+            errors=errors,
+            description_placeholders=_placeholders(self.hass),
         )
