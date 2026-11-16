@@ -1,0 +1,107 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Water Reminder",
+        "data": {
+          "notify_service": "Notify service",
+          "alarm_entity": "Alarm panel",
+          "quiet_alarm_states": "Quiet at alarm state",
+          "clear_after": "Remove notification after",
+          "title": "Title",
+          "message": "Message"
+        },
+        "data_description": {
+          "notify_service": "Your iPhone. If you wear an Apple Watch, iOS forwards the notification there.",
+          "alarm_entity": "Optional. No reminder in the states selected below.",
+          "clear_after": "0 = keep the notification.",
+          "title": "Empty = default text.",
+          "message": "Empty = default text."
+        }
+      }
+    },
+    "error": {
+      "unknown_service": "Service not found."
+    },
+    "abort": {
+      "already_configured": "A reminder for this service already exists."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "alarm_entity": "Alarm panel",
+          "quiet_alarm_states": "Quiet at alarm state",
+          "clear_after": "Remove notification after",
+          "title": "Title",
+          "message": "Message"
+        },
+        "data_description": {
+          "alarm_entity": "Optional. No reminder in the states selected below.",
+          "clear_after": "0 = keep the notification.",
+          "title": "Empty = default text.",
+          "message": "Empty = default text."
+        }
+      }
+    }
+  },
+  "selector": {
+    "quiet_alarm_states": {
+      "options": {
+        "armed_home": "Armed home",
+        "armed_away": "Armed away",
+        "armed_night": "Armed night",
+        "armed_vacation": "Armed vacation",
+        "armed_custom_bypass": "Armed custom bypass"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "focus_quiet": {
+        "name": "Quiet (Focus)"
+      },
+      "enabled": {
+        "name": "Water Reminder"
+      }
+    },
+    "number": {
+      "interval": {
+        "name": "Interval"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Off",
+          "active": "Active",
+          "paused": "Paused",
+          "quiet_alarm": "Quiet (alarm)",
+          "quiet_focus": "Quiet (focus)"
+        }
+      },
+      "next_push": {
+        "name": "Next reminder"
+      },
+      "paused_until": {
+        "name": "Paused until"
+      }
+    },
+    "button": {
+      "pause_1h": {
+        "name": "Pause 1 h"
+      },
+      "pause_3h": {
+        "name": "Pause 3 h"
+      },
+      "pause_today": {
+        "name": "Pause today"
+      },
+      "resume": {
+        "name": "Resume"
+      }
+    }
+  }
+}

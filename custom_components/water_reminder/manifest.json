@@ -1,0 +1,12 @@
+{
+  "domain": "water_reminder",
+  "name": "Water Reminder",
+  "codeowners": ["@TheBigNeo-AI"],
+  "config_flow": true,
+  "documentation": "https://github.com/TheBigNeo-AI/HomeAssistant-Water-Reminder",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/TheBigNeo-AI/HomeAssistant-Water-Reminder/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
