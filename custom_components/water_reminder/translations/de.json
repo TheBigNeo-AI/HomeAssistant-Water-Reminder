@@ -1,0 +1,108 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Water Reminder",
+        "data": {
+          "notify_service": "Benachrichtigungsdienst",
+          "alarm_entity": "Alarmanlage",
+          "quiet_alarm_states": "Still bei Alarmzustand",
+          "clear_after": "Meldung entfernen nach",
+          "title": "Titel",
+          "message": "Nachricht"
+        },
+        "data_description": {
+          "notify_service": "Das iPhone. Trägst du die Apple Watch, leitet iOS die Meldung automatisch dorthin.",
+          "alarm_entity": "Optional. Keine Erinnerung in den unten gewählten Zuständen.",
+          "clear_after": "0 = Meldung bleibt stehen.",
+          "title": "Leer = Standardtext.",
+          "message": "Leer = Standardtext."
+        }
+      }
+    },
+    "error": {
+      "unknown_service": "Dienst nicht gefunden.",
+      "not_mobile_app": "Bitte einen notify.mobile_app_*-Dienst wählen (Home Assistant Companion App)."
+    },
+    "abort": {
+      "already_configured": "Für diesen Dienst gibt es schon eine Erinnerung."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "alarm_entity": "Alarmanlage",
+          "quiet_alarm_states": "Still bei Alarmzustand",
+          "clear_after": "Meldung entfernen nach",
+          "title": "Titel",
+          "message": "Nachricht"
+        },
+        "data_description": {
+          "alarm_entity": "Optional. Keine Erinnerung in den unten gewählten Zuständen.",
+          "clear_after": "0 = Meldung bleibt stehen.",
+          "title": "Leer = Standardtext.",
+          "message": "Leer = Standardtext."
+        }
+      }
+    }
+  },
+  "selector": {
+    "quiet_alarm_states": {
+      "options": {
+        "armed_home": "Scharf (Zuhause)",
+        "armed_away": "Scharf (Abwesend)",
+        "armed_night": "Scharf (Nacht)",
+        "armed_vacation": "Scharf (Urlaub)",
+        "armed_custom_bypass": "Scharf (Benutzerdefiniert)"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "focus_quiet": {
+        "name": "Still (Fokus)"
+      },
+      "enabled": {
+        "name": "Water Reminder"
+      }
+    },
+    "number": {
+      "interval": {
+        "name": "Intervall"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Aus",
+          "active": "Aktiv",
+          "paused": "Pausiert",
+          "quiet_alarm": "Still (Alarm)",
+          "quiet_focus": "Still (Fokus)"
+        }
+      },
+      "next_push": {
+        "name": "Nächste Erinnerung"
+      },
+      "paused_until": {
+        "name": "Pausiert bis"
+      }
+    },
+    "button": {
+      "pause_1h": {
+        "name": "1 h pausieren"
+      },
+      "pause_3h": {
+        "name": "3 h pausieren"
+      },
+      "pause_today": {
+        "name": "Heute pausieren"
+      },
+      "resume": {
+        "name": "Fortsetzen"
+      }
+    }
+  }
+}
