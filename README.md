@@ -7,7 +7,11 @@ No YAML, no helpers – everything is set up and controlled in the UI.
 
 ## Features
 
-- **Interval** adjustable (default 30 min).
+- **Interval** adjustable (default 30 min), aligned to the clock: with 30 min the reminders
+  come at hh:00 and hh:30. Intervals that do not divide a day restart at midnight.
+- **Several targets:** send to one or more devices with the Companion app.
+- **Test button** sends a reminder right away – unless it is off, paused or quiet; then it
+  tells you why.
 - **Apple Watch first:** the push goes to your iPhone; iOS shows it on the Watch while you
   wear it and the iPhone is locked, otherwise on the iPhone
   ([Apple](https://support.apple.com/en-in/HT204791)).
@@ -23,7 +27,8 @@ No YAML, no helpers – everything is set up and controlled in the UI.
 1. Home Assistant → **Settings → Marketplace** → add this repository by its link
    (`https://github.com/TheBigNeo-AI/HomeAssistant-Water-Reminder`) and install *Water Reminder*.
 2. **Settings → Devices & services → Add integration → Water Reminder**.
-3. Pick your iPhone's notify service (`notify.mobile_app_…`) and, optionally, your alarm panel.
+3. Pick your iPhone's notify service (`notify.mobile_app_…`, more targets possible) and,
+   optionally, your alarm panel.
 
 Requires the Home Assistant Companion app. For the pause buttons on the Watch, install the
 Home Assistant Watch app.
@@ -38,9 +43,10 @@ Home Assistant Watch app.
 | `sensor.water_reminder_status` | `active`, `paused`, `quiet_alarm`, `quiet_focus`, `off` |
 | `sensor.water_reminder_next_reminder` | Time of the next reminder |
 | `sensor.water_reminder_paused_until` | End of the current pause |
+| `button.water_reminder_send_test` | Send a reminder now (respects off / pause / quiet) |
 | `button.water_reminder_pause_1_h` / `_3_h` / `_today` / `resume` | Pause / resume |
 
-Alarm panel, quiet states, removal delay and texts: **Configure** on the integration.
+Targets, alarm panel, quiet states, removal delay and texts: **Configure** on the integration.
 
 ## Focus modes (Sleep, Cinema, …)
 
@@ -59,7 +65,5 @@ If a reminder stays, the next one replaces it.
 
 ## Development
 
-```bash
-pip install -r requirements_test.txt
-pytest
-```
+See [DEVELOPERS.md](DEVELOPERS.md) for versioning, local tests, testing a pre-release and
+the release steps.
