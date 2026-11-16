@@ -15,6 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secret-scan:
+    uses: TheBigNeo-AI/.github/.github/workflows/secret-scan.yml@main
+
   validate:
     runs-on: ubuntu-latest
     steps:
