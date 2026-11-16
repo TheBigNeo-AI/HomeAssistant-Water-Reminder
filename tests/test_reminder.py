@@ -12,6 +12,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.water_reminder.const import (
+    ACTION_OK,
     ACTION_PAUSE_1H,
     ACTION_PAUSE_TODAY,
     CONF_NOTIFY_SERVICE,
@@ -66,7 +67,17 @@ async def test_push_and_clear(hass: HomeAssistant, entry, sent, freezer) -> None
     assert len(_pushes(sent)) == 1
     push = _pushes(sent)[0]
     assert push["data"]["tag"] == "water_reminder"
-    assert push["data"]["actions"][0]["action"] == f"{ACTION_PAUSE_1H}_{entry.entry_id}"
+    actions = push["data"]["actions"]
+    assert [a["action"] for a in actions[:2]] == [
+        f"{ACTION_OK}_{entry.entry_id}",
+        f"{ACTION_PAUSE_1H}_{entry.entry_id}",
+    ]
+    assert [a["title"] for a in actions] == [
+        "OK",
+        "Pause for 1 h",
+        "Pause for 3 h",
+        "Pause for today",
+    ]
     assert _clears(sent) == []
     await _advance(hass, freezer, seconds=61)
     assert len(_clears(sent)) == 1
@@ -148,6 +159,15 @@ async def test_notification_actions(hass: HomeAssistant, entry, sent) -> None:
     paused = entry.runtime_data.paused_until
     assert paused == dt_util.start_of_local_day() + timedelta(days=1)
     assert len(_clears(sent)) == 1
+
+    # OK only removes the notification.
+    entry.runtime_data.resume()
+    hass.bus.async_fire(
+        "mobile_app_notification_action", {"action": f"{ACTION_OK}_{entry.entry_id}"}
+    )
+    await hass.async_block_till_done()
+    assert entry.runtime_data.paused_until is None
+    assert len(_clears(sent)) == 2
 
 
 async def test_state_persists(hass: HomeAssistant, entry, sent, freezer) -> None:

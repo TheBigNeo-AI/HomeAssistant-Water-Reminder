@@ -19,7 +19,8 @@ No YAML, no helpers – everything is set up and controlled in the UI.
   the previous one, so there is never more than one.
 - **Quiet** while the alarm panel is in selected states (default: `armed_night`)
   or while the *Quiet (Focus)* switch is on.
-- **Pause from the notification:** `1 h`, `3 h`, `Today off`. Also as buttons in HA,
+- **Actions in the notification:** `OK` (dismiss, also on the Watch), `Pause for 1 h`,
+  `Pause for 3 h`, `Pause for today`. Pausing also works with buttons in HA,
   plus *Resume*.
 
 ## Installation
@@ -29,6 +30,10 @@ No YAML, no helpers – everything is set up and controlled in the UI.
 2. **Settings → Devices & services → Add integration → Water Reminder**.
 3. Pick your iPhone's notify service (`notify.mobile_app_…`, more targets possible) and,
    optionally, your alarm panel.
+
+The first install loads without a restart; updates need a Home Assistant restart, because
+Python code that is already loaded cannot be replaced at runtime (dashboard cards only need a
+browser reload, integrations do not have that option).
 
 Requires the Home Assistant Companion app. For the pause buttons on the Watch, install the
 Home Assistant Watch app.
@@ -56,6 +61,10 @@ personal automation per Focus:
 1. Shortcuts → Automation → **New** → **Focus** → e.g. *Sleep* → *When turning on* → *Run immediately*.
 2. Action: Home Assistant → **Control switch** → `switch.water_reminder_quiet_focus` → *On*.
 3. Repeat with *When turning off* → *Off*.
+
+Personal automations are device-specific and cannot be shared or imported
+([Apple](https://support.apple.com/guide/shortcuts/apdf01f8c054/ios)), so they have to be
+created on each device. Only regular shortcuts can be shared via iCloud link.
 
 ## Known limitation
 

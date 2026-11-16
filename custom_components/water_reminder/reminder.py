@@ -19,6 +19,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ACTION_OK,
     ACTION_PAUSE_1H,
     ACTION_PAUSE_3H,
     ACTION_PAUSE_TODAY,
@@ -43,6 +44,28 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
+
+
+# Action button labels; OK comes first so the Watch shows a way to dismiss.
+ACTION_LABELS: dict[str, dict[str, str]] = {
+    "de": {
+        ACTION_OK: "OK",
+        ACTION_PAUSE_1H: "1 h pausieren",
+        ACTION_PAUSE_3H: "3 h pausieren",
+        ACTION_PAUSE_TODAY: "Heute pausieren",
+    },
+    "en": {
+        ACTION_OK: "OK",
+        ACTION_PAUSE_1H: "Pause for 1 h",
+        ACTION_PAUSE_3H: "Pause for 3 h",
+        ACTION_PAUSE_TODAY: "Pause for today",
+    },
+}
+
+
+def action_labels(language: str) -> dict[str, str]:
+    """Return the action labels for the instance language."""
+    return ACTION_LABELS["de" if language.startswith("de") else "en"]
 
 
 def default_texts(language: str) -> tuple[str, str]:
@@ -298,12 +321,8 @@ class WaterReminder:
                     "tag": NOTIFICATION_TAG,
                     "group": NOTIFICATION_TAG,
                     "actions": [
-                        {"action": self._action(ACTION_PAUSE_1H), "title": "1 h"},
-                        {"action": self._action(ACTION_PAUSE_3H), "title": "3 h"},
-                        {
-                            "action": self._action(ACTION_PAUSE_TODAY),
-                            "title": self._today_label(),
-                        },
+                        {"action": self._action(action), "title": title}
+                        for action, title in action_labels(self.hass.config.language).items()
                     ],
                 },
             }
@@ -313,9 +332,6 @@ class WaterReminder:
             self._unsub_clear = None
         if self.clear_after > 0:
             self._unsub_clear = async_call_later(self.hass, self.clear_after, self._handle_clear)
-
-    def _today_label(self) -> str:
-        return "Heute aus" if self.hass.config.language.startswith("de") else "Today off"
 
     async def _handle_clear(self, _now: datetime) -> None:
         self._unsub_clear = None
@@ -339,7 +355,8 @@ class WaterReminder:
             self._action(ACTION_PAUSE_3H): 3,
             self._action(ACTION_PAUSE_TODAY): None,
         }
-        if action not in hours:
+        if action in hours:
+            self.pause(hours[action])
+        elif action != self._action(ACTION_OK):
             return
-        self.pause(hours[action])
         await self.async_clear()
