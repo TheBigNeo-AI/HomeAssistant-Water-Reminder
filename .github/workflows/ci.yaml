@@ -16,7 +16,44 @@ concurrency:
 
 jobs:
   secret-scan:
-    uses: TheBigNeo-AI/.github/.github/workflows/secret-scan.yml@main
+    # gitleaks and a check for absolute local paths on the commits of a pull request
+    # (copied from NoSpoonLabs/.github secret-scan.yml, kept local on purpose).
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    env:
+      BASE: ${{ github.event.pull_request.base.sha }}
+      HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks (commits of this pull request)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz \
+            | tar -xz gitleaks
+          ./gitleaks detect --source . --no-banner --redact --verbose --log-opts "$BASE..$HEAD"
+
+      - name: Absolute local paths (lines added by this pull request)
+        run: |
+          # Prints «file:line: text» for every added line that holds an absolute local path.
+          found=$(git diff --no-color -U0 "$BASE...$HEAD" | awk '
+            /^diff --git / { header = 1; next }
+            header && /^\+\+\+ / { file = substr($0, 7); sub(/\t$/, "", file); next }
+            /^@@ / { header = 0; split($3, start, ","); line = start[1] + 0; next }
+            header || !/^\+/ { next }
+            {
+              text = substr($0, 2)
+              if (text ~ /\/home\/[A-Za-z0-9_.-]+\/|\/Users\/[A-Za-z0-9_.-]+\/|[A-Za-z]:[\\\/](Users|home)[\\\/]/ \
+                  && text !~ /\/home\/user\//)
+                print file ":" line ": " text
+              line++
+            }')
+          if [ -n "$found" ]; then
+            echo "$found"
+            echo "FAIL: absolute local path added, see «file:line: text» above; write example paths as /…/"
+            exit 1
+          fi
 
   validate:
     runs-on: ubuntu-latest
