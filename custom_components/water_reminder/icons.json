@@ -1,0 +1,57 @@
+{
+  "entity": {
+    "switch": {
+      "enabled": {
+        "default": "mdi:cup-water",
+        "state": {
+          "off": "mdi:cup-off-outline"
+        }
+      },
+      "focus_quiet": {
+        "default": "mdi:bell-sleep",
+        "state": {
+          "off": "mdi:bell-outline"
+        }
+      }
+    },
+    "number": {
+      "interval": {
+        "default": "mdi:timer-cog-outline"
+      }
+    },
+    "sensor": {
+      "status": {
+        "default": "mdi:water-check",
+        "state": {
+          "off": "mdi:water-off",
+          "paused": "mdi:pause-circle-outline",
+          "quiet_alarm": "mdi:shield-moon",
+          "quiet_focus": "mdi:bell-sleep"
+        }
+      },
+      "next_push": {
+        "default": "mdi:bell-ring-outline"
+      },
+      "paused_until": {
+        "default": "mdi:timer-pause-outline"
+      }
+    },
+    "button": {
+      "test": {
+        "default": "mdi:bell-ring"
+      },
+      "pause_1h": {
+        "default": "mdi:pause-circle-outline"
+      },
+      "pause_3h": {
+        "default": "mdi:pause-circle-outline"
+      },
+      "pause_today": {
+        "default": "mdi:calendar-remove"
+      },
+      "resume": {
+        "default": "mdi:play-circle-outline"
+      }
+    }
+  }
+}
