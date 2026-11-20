@@ -6,7 +6,8 @@ from typing import Final
 
 DOMAIN: Final = "water_reminder"
 
-CONF_NOTIFY_SERVICE: Final = "notify_service"
+CONF_NOTIFY_SERVICE: Final = "notify_service"  # config entry v1, single target
+CONF_NOTIFY_SERVICES: Final = "notify_services"
 CONF_ALARM_ENTITY: Final = "alarm_entity"
 CONF_QUIET_ALARM_STATES: Final = "quiet_alarm_states"
 CONF_CLEAR_AFTER: Final = "clear_after"
@@ -31,6 +32,7 @@ NOTIFICATION_TAG: Final = "water_reminder"
 
 # Actionable notification id prefixes (event mobile_app_notification_action);
 # the entry id is appended so each entry only reacts to its own taps.
+ACTION_OK: Final = "WATER_REMINDER_OK"
 ACTION_PAUSE_1H: Final = "WATER_REMINDER_PAUSE_1H"
 ACTION_PAUSE_3H: Final = "WATER_REMINDER_PAUSE_3H"
 ACTION_PAUSE_TODAY: Final = "WATER_REMINDER_PAUSE_TODAY"

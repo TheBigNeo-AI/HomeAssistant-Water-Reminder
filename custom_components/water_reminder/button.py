@@ -1,4 +1,4 @@
-"""Pause / resume buttons."""
+"""Test, pause and resume buttons."""
 
 from __future__ import annotations
 
@@ -24,9 +24,20 @@ async def async_setup_entry(
     entry: WaterReminderConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
+    reminder = entry.runtime_data
     async_add_entities(
-        PauseButton(entry.runtime_data, key, hours) for key, hours in BUTTONS.items()
+        [
+            TestButton(reminder, "test"),
+            *(PauseButton(reminder, key, hours) for key, hours in BUTTONS.items()),
+        ]
     )
+
+
+class TestButton(WaterReminderEntity, ButtonEntity):
+    """Send a reminder now; refused (with the reason) while quiet, paused or off."""
+
+    async def async_press(self) -> None:
+        await self.reminder.async_test()
 
 
 class PauseButton(WaterReminderEntity, ButtonEntity):
